@@ -1,0 +1,232 @@
+local camera = game.Workspace.CurrentCamera
+local studio = game.Workspace.Walls 
+local studio2 = game.Workspace.Studio2
+local tweenService = game:GetService("TweenService")
+local template = script.Template
+local scrollingFrame = script.Parent.Background.ScrollingFrame
+
+local buttonConnections = {}
+
+local function setTemplateEquipped(template)
+	for i,v in pairs(scrollingFrame:GetChildren())do
+		if v:FindFirstChild("Equipped")then
+			v.Equipped.Text = "Unequipped"
+			v.Equipped.TextColor3 = Color3.fromRGB(170, 0, 0)
+		end
+	end
+	
+	template.Equipped.Text = "Equipped"
+	template.Equipped.TextColor3 = Color3.fromRGB(0, 170, 0)
+end
+
+local function addToFrame(pet)
+	local newTemplate = template:Clone()
+	newTemplate.Name = pet.Name
+	newTemplate.PetName.Text = pet.Name
+	newTemplate.Parent = scrollingFrame
+	
+	local viewPet = pet:Clone()
+	viewPet.Parent = newTemplate.ViewportFrame
+	
+	local NewCamera = Instance.new("Camera")
+	NewCamera.CFrame = CFrame.new(viewPet.PrimaryPart.Position + (viewPet.PrimaryPart.CFrame.lookVector * 3),viewPet.PrimaryPart.Position)
+	NewCamera.Parent = newTemplate.ViewportFrame
+	
+	newTemplate.ViewportFrame.CurrentCamera = NewCamera
+	
+	buttonConnections[#buttonConnections+1] = newTemplate.MouseButton1Click:Connect(function()
+		if newTemplate.Equipped.Text == "Equipped" then
+			game.ReplicatedStorage.UnequipPet:FireServer()
+			newTemplate.Equipped.Text = "Unequipped"
+			newTemplate.Equipped.TextColor3 = Color3.fromRGB(170, 0, 0)
+		else
+ 			newTemplate.Equipped.Text = "Equipped"
+			game.ReplicatedStorage.EquipPet:FireServer(pet.Name)
+			setTemplateEquipped(newTemplate)
+		end
+	end)
+end
+
+game.ReplicatedStorage.SetEquippedPet.OnClientEvent:Connect(function(petName)
+	if scrollingFrame:FindFirstChild(petName)then
+		setTemplateEquipped(scrollingFrame[petName])
+	end
+end)
+
+game.ReplicatedStorage.SendData.OnClientEvent:Connect(function(petNames)
+	print("Client has picked up the signal.")
+	for i,petName in pairs(petNames)do
+		if game.ReplicatedStorage.IcePets:FindFirstChild(petName)then
+			addToFrame(game.ReplicatedStorage.IcePets:FindFirstChild(petName))
+		end
+	end
+end)
+
+game.ReplicatedStorage.HatchIceEgg.OnClientEvent:Connect(function(pet,brickColor)
+	addToFrame(pet)
+	camera.CameraType = Enum.CameraType.Scriptable
+	camera.CFrame = studio.CameraPart.CFrame
+	
+	wait(1.5)
+	
+
+	for i=1,50, 1 do
+		studio.IceEgg.Egg.Size = studio.IceEgg.Egg.Size + Vector3.new(0.1,0.1,0.1)
+		studio.IceEgg.Ice_Egg.Size = studio.IceEgg.Ice_Egg.Size + Vector3.new(0.1,0.1,0.1)
+		wait(0.01)
+	end
+	
+	local explosion = Instance.new("Explosion",studio.IceEgg)
+	explosion.BlastRadius = 10
+	explosion.BlastPressure = 0
+	explosion.Position = studio.IceEgg.Egg.Position
+	explosion.ExplosionType = Enum.ExplosionType.NoCraters
+	explosion.DestroyJointRadiusPercent = 0
+	
+	studio.IceEgg.Egg.Transparency = 1
+	studio.IceEgg.Ice_Egg.Transparency = 1
+	
+	
+	wait(2)
+	local petClone = pet:Clone()
+
+	
+	for i,v in pairs(petClone:GetChildren())do
+		if v:IsA("BasePart")then
+			v.Anchored = true
+		end
+	end
+	
+	for i,v in pairs(studio.Confetti:GetChildren())do
+		if v:IsA("ParticleEmitter")then
+			v.Enabled = true
+		end
+		
+		petClone:SetPrimaryPartCFrame(CFrame.new(studio.IceEgg.Egg.Position,studio.CameraPart.Position))
+		petClone.Parent = studio
+		
+		local tweenInfo = TweenInfo.new(
+			1,
+			Enum.EasingStyle.Sine,
+			Enum.EasingDirection.In,
+			0,
+			false,
+			0
+		)
+		
+		local tween = tweenService:Create(camera, tweenInfo, {CFrame = CFrame.new(petClone.PrimaryPart.Position +( petClone.PrimaryPart.CFrame.lookVector * 5)+ Vector3.new(0,0.75,0),petClone.PrimaryPart.Position)})
+		
+		tween:Play()
+		
+		script.Parent.Parent.PetChosen.Label.Visible = true
+		script.Parent.Parent.PetChosen.Label.Text = "You got the ".. petClone.Name
+		studio.IceEgg.Egg.BrickColor = BrickColor.new("Toothpaste") or BrickColor.new("Really red") or BrickColor.new("Royal purple") or BrickColor.new("Nougat")
+		studio.IceEgg.Ice_Egg.BrickColor = BrickColor.new("Toothpaste") or BrickColor.new("Really red") or BrickColor.new("Royal purple") or BrickColor.new("Nougat")
+		
+		wait(5)
+		camera.CameraType = Enum.CameraType.Custom
+
+		studio.IceEgg.Egg.Transparency = 0
+		studio.IceEgg.Ice_Egg.Transparency = 0
+		
+		studio.IceEgg.Egg.BrickColor = BrickColor.new("Toothpaste") or BrickColor.new("Really red") or BrickColor.new("Royal purple") or BrickColor.new("Nougat")
+		studio.IceEgg.Ice_Egg.BrickColor = BrickColor.new("Toothpaste") or BrickColor.new("Really red") or BrickColor.new("Royal purple") or BrickColor.new("Nougat")
+		studio.IceEgg.Egg.Material = Enum.Material.Neon
+		studio.IceEgg.Egg.Material = Enum.Material.Glass
+		
+		studio.IceEgg.Egg.Size = Vector3.new(6.253, 7.432, 5.844)
+		studio.IceEgg.Ice_Egg.Size = Vector3.new(7.018, 9.432, 7.5)
+
+		script.Parent.Parent.PetChosen.Label.Visible = false
+		petClone:Destroy()
+		
+		for i,v in pairs(studio.Confetti:GetChildren())do
+			if v:IsA("ParticleEmitter")then
+				v.Enabled = false
+			end
+		end
+	end
+end)
+
+
+game.ReplicatedStorage.HatchSillyEgg.OnClientEvent:Connect(function(pet,brickColor)
+	addToFrame(pet)
+	camera.CameraType = Enum.CameraType.Scriptable
+	camera.CFrame = studio2.CameraPart.CFrame
+	
+	wait(1.5)
+
+
+	for i=1,50, 1 do
+		studio2.SillyEgg.Basic_Egg.Size = studio2.SillyEgg.Basic_Egg.Size + Vector3.new(0.1,0.1,0.1)
+		wait(0.01)
+	end
+
+	local explosion = Instance.new("Explosion",studio2.SillyEgg)
+	explosion.BlastRadius = 10
+	explosion.BlastPressure = 0
+	explosion.Position = studio2.SillyEgg.Basic_Egg.Position
+	explosion.ExplosionType = Enum.ExplosionType.NoCraters
+	explosion.DestroyJointRadiusPercent = 0
+
+	studio2.SillyEgg.Basic_Egg.Transparency = 1
+
+
+	wait(2)
+	local petClone = pet:Clone()
+
+
+	for i,v in pairs(petClone:GetChildren())do
+		if v:IsA("BasePart")then
+			v.Anchored = true
+		end
+	end
+
+	for i,v in pairs(studio2.Confetti:GetChildren())do
+		if v:IsA("ParticleEmitter")then
+			v.Enabled = true
+		end
+
+		petClone:SetPrimaryPartCFrame(CFrame.new(studio2.SillyEgg.Basic_Egg.Position,studio2.CameraPart.Position))
+		petClone.Parent = studio
+
+		local tweenInfo = TweenInfo.new(
+			1,
+			Enum.EasingStyle.Sine,
+			Enum.EasingDirection.In,
+			0,
+			false,
+			0
+		)
+
+		local tween = tweenService:Create(camera, tweenInfo, {CFrame = CFrame.new(petClone.PrimaryPart.Position +( petClone.PrimaryPart.CFrame.lookVector * 5)+ Vector3.new(0,0.75,0),petClone.PrimaryPart.Position)})
+
+		tween:Play()
+
+		script.Parent.Parent.PetChosen.Label.Visible = true
+		script.Parent.Parent.PetChosen.Label.Text = "You got the ".. petClone.Name
+		studio2.SillyEgg.Basic_Egg.BrickColor = BrickColor.new("Toothpaste") or BrickColor.new("Really red") or BrickColor.new("Royal purple") or BrickColor.new("Nougat")
+
+
+		wait(5)
+		camera.CameraType = Enum.CameraType.Custom
+
+		studio2.SillyEgg.Basic_Egg.Transparency = 0
+		
+
+		studio2.SillyEgg.Basic_Egg.BrickColor = BrickColor.new("Plum") 
+		studio2.SillyEgg.Basic_Egg.Material = Enum.Material.Glass
+
+		studio2.SillyEgg.Basic_Egg.Size = Vector3.new(8.337, 11.275, 9.027)
+
+
+		script.Parent.Parent.PetChosen.Label.Visible = false
+		petClone:Destroy()
+
+		for i,v in pairs(studio2.Confetti:GetChildren())do
+			if v:IsA("ParticleEmitter")then
+				v.Enabled = false
+			end
+		end
+	end
+end)
